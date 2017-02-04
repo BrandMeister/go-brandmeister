@@ -29,10 +29,10 @@ type Client struct {
 	Subscriptions map[uint32]SessionType
 
 	// ApplicationCallback for application data
-	ApplicationCallback func(dataType uint16, data []byte)
+	ApplicationCallback func(dataType uint16, parsed interface{})
 
 	// DeviceCallback for device data
-	DeviceCallback func(dataType uint16, data []byte)
+	DeviceCallback func(dataType uint16, parsed interface{})
 
 	conn net.Conn
 
@@ -59,7 +59,7 @@ func NewClient(addr, password string) (*Client, error) {
 	}
 
 	if Debug {
-		log.Printf("rewind: connecting to %s\n", addr)
+		log.Printf("rewind: connecting to udp://%s\n", addr)
 	}
 
 	var err error
@@ -145,9 +145,6 @@ func (c *Client) receive() {
 			c.errs <- err
 			return
 		}
-		if Debug {
-			log.Printf("rewind: received %q (%d)\n", data[:n], n)
-		}
 		c.data <- data[:n]
 	}
 }
@@ -156,10 +153,6 @@ func (c *Client) parse(b []byte) (err error) {
 	var header Data
 	if err = binary.Read(bytes.NewBuffer(b), binary.LittleEndian, &header); err != nil {
 		return
-	}
-
-	if Debug {
-		log.Printf("rewind: parse packet type %#04x\n", header.Type)
 	}
 
 	switch header.Type {
@@ -199,6 +192,26 @@ func (c *Client) parse(b []byte) (err error) {
 	case TypeChallenge:
 		c.auth = false
 		return c.sendChallengeResponse(b[DataLength:])
+
+		// Application Data
+
+	case TypeSuperHeader: // 0x0928
+		if c.ApplicationCallback == nil {
+			return nil
+		}
+
+		if l := len(b[DataLength:]); l < SuperHeaderLength {
+			log.Printf("rewind: received corrupt super header with length %d (expected %d)\n", l, SuperHeaderLength)
+			return nil
+		}
+
+		var superHeader SuperHeader
+		if derr := binary.Read(bytes.NewBuffer(b[DataLength:]), binary.LittleEndian, &superHeader); derr != nil {
+			log.Printf("rewind: unable to unmarshal super header: %v\n", derr)
+			return nil
+		}
+
+		c.ApplicationCallback(header.Type, &superHeader)
 
 	default:
 		if header.Type >= ClassApplication {
@@ -243,8 +256,6 @@ func (c *Client) sendData(typ uint16, payload Payload) error {
 	if err := binary.Write(buffer, binary.LittleEndian, payload); err != nil {
 		return err
 	}
-
-	log.Printf("rewind: send %q\n", buffer.Bytes())
 
 	_, err := c.conn.Write(buffer.Bytes())
 	return err

@@ -2,6 +2,8 @@
 // described at https://wiki.brandmeister.network/index.php/Simple_External_Application
 package rewind
 
+import "strings"
+
 // Debug enables debug messages
 var Debug bool
 
@@ -9,6 +11,7 @@ var Debug bool
 const (
 	DataLength        = SignLength + 10
 	DescriptionLength = 96
+	SuperHeaderLength = 12 + 2*CallLength
 )
 
 // Payload to be sent along with data
@@ -101,6 +104,13 @@ func (d SubscriptionData) Len() int {
 	return 8
 }
 
+// Call is the callsign of a station
+type Call [CallLength]byte
+
+func (c Call) String() string {
+	return strings.SplitN(string(c[:]), "\x00", 2)[0]
+}
+
 // SuperHeader contains metadata about a transmission
 type SuperHeader struct {
 	// Type of session
@@ -113,10 +123,10 @@ type SuperHeader struct {
 	Target uint32
 
 	// SourceCall is the source call (or zeros)
-	SourceCall [CallLength]byte
+	SourceCall Call
 
 	// TargetCall is the target call (or zeros)
-	TargetCall [CallLength]byte
+	TargetCall Call
 }
 
 // Rewind Transport Layer

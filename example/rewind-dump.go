@@ -12,6 +12,7 @@ import (
 )
 
 func main() {
+	id := flag.Int("id", 1234, "application id")
 	addr := flag.String("addr", "brandmeister.pd0zry.ampr.org", "server address")
 	pass := flag.String("password", "", "server password")
 	subs := flag.String("subscribe", "", "subscribe to TGs")
@@ -27,11 +28,11 @@ func main() {
 
 	c.Description = fmt.Sprintf("go-brandmeister rewind-dump.go (%s; %s; %s; %s)",
 		runtime.Version(), runtime.GOOS, runtime.GOARCH, runtime.Compiler)
-	c.RemoteID = 2049666
+	c.RemoteID = uint32(*id)
 	c.Options = rewind.OptionSuperHeader
 	c.Subscriptions = make(map[uint32]rewind.SessionType)
 
-	c.ApplicationCallback = func(dataType uint16, data []byte) {
+	c.ApplicationCallback = func(dataType uint16, parsed interface{}) {
 		switch {
 		case dataType >= rewind.TypeDMRDataBase && dataType < rewind.TypeDMRAudioBase:
 			log.Printf("received: DMR data type %d\n", dataType-rewind.TypeDMRDataBase)
@@ -40,7 +41,7 @@ func main() {
 		case dataType == rewind.TypeDMREmbeddedData:
 			log.Println("received: DMR embedded data")
 		case dataType == rewind.TypeSuperHeader:
-			log.Println("received: super header")
+			log.Printf("received: super header: %+v\n", parsed)
 		}
 	}
 
