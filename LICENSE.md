@@ -1,6 +1,7 @@
-MIT License
+# MIT License
 
-Copyright (c) 2017 
+Copyright (c) 2017 BrandMeister Development team
+Copyright (c) 2016-2017 Wijnand Modderman-Lenstra <maze@pyth0n.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+In order to make use of this library you must have a CEPT (Conference of Postal
+and Telecommunications Administrations) recognised amateur radio license in
+compliance with CEPT T/R 61-01 or ECC/REC/(05) 06.
