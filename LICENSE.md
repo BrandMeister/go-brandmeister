@@ -1,6 +1,7 @@
 # MIT License
 
 Copyright (c) 2017 BrandMeister Development team
+
 Copyright (c) 2016-2017 Wijnand Modderman-Lenstra <maze@pyth0n.org>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
