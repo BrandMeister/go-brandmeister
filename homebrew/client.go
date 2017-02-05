@@ -149,9 +149,64 @@ func (c *Client) ListenAndServe(f chan<- *DMRData) error {
 	}
 }
 
-func (c *Client) WriteDMR(dmrData *DMRData) error {
+// SendDMR sends a DMRData packet
+func (c *Client) SendDMR(dmrData *DMRData) error {
 	copy(dmrData.Signature[:], []byte(SignDMRData))
 	return binary.Write(c.conn, binary.BigEndian, dmrData)
+}
+
+// SendInterrupt sends a call interrupt to a time slot (0 = DMO, 1 = ts1, 2 = ts2)
+func (c *Client) SendInterrupt(slot uint8) error {
+	if slot > 2 {
+		return ErrInvalidSlot
+	}
+	var (
+		data = make([]byte, len(SignRepeaterInterrupt)+8)
+		n    = copy(data, []byte(SignRepeaterInterrupt))
+	)
+	copy(data[n:], c.hexid[:])
+	data = append(data, []byte(fmt.Sprintf(":%d", slot))...)
+	_, err := c.conn.Write(data)
+	return err
+}
+
+// SendRSSI sends an RSSI report for a time slot (0 = DMO, 1 = ts1, 2 = ts2)
+func (c *Client) SendRSSI(slot uint8, dBm float32) error {
+	if slot > 2 {
+		return ErrInvalidSlot
+	}
+	var (
+		data = make([]byte, len(SignRepeaterRSSI)+8)
+		n    = copy(data, []byte(SignRepeaterRSSI))
+	)
+	copy(data[n:], c.hexid[:])
+	data = append(data, []byte(fmt.Sprintf(":%d%f", slot, dBm))...)
+	_, err := c.conn.Write(data)
+	return err
+}
+
+// SendIdle sends a Firebase idle message
+func (c *Client) SendIdle(tokenID uint64, token string) error {
+	var (
+		data = make([]byte, len(SignRepeaterIdle)+8)
+		n    = copy(data, []byte(SignRepeaterIdle))
+	)
+	copy(data[n:], c.hexid[:])
+	data = append(data, []byte(fmt.Sprintf(":%d:%s", tokenID, token))...)
+	_, err := c.conn.Write(data)
+	return err
+}
+
+// SendWake sends a Firebase wake message
+func (c *Client) SendWake(tokenID uint64, token string) error {
+	var (
+		data = make([]byte, len(SignRepeaterWake)+8)
+		n    = copy(data, []byte(SignRepeaterWake))
+	)
+	copy(data[n:], c.hexid[:])
+	data = append(data, []byte(fmt.Sprintf(":%d:%s", tokenID, token))...)
+	_, err := c.conn.Write(data)
+	return err
 }
 
 func (c *Client) parse(b []byte, f chan<- *DMRData) (err error) {

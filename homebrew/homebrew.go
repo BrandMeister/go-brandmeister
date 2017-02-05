@@ -18,6 +18,7 @@ var (
 	ErrInvalidColorCode      = errors.New("homebrew: invalid color code")
 	ErrInvalidLatitude       = errors.New("homebrew: invalid latitude")
 	ErrInvalidLongitude      = errors.New("homebrew: invalid longitude")
+	ErrInvalidSlot           = errors.New("homebrew: invalid slot")
 	ErrMasterRefusedLogin    = errors.New("homebrew: master refused login")
 	ErrMasterRefusedPassword = errors.New("homebrew: master refused password")
 	ErrMasterClose           = errors.New("homebrew: master sent close")
