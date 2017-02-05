@@ -43,7 +43,6 @@ const (
 
 // Device Data types for various vendors
 const (
-	// Kairos
 	ClassKairosData = ClassDeviceData + 0x00
 	ClassHyteraData = ClassDeviceData + 0x10
 )
@@ -89,8 +88,6 @@ const (
 
 // Services
 const (
-	ServiceCronosAgent       = RoleRepeaterAgent + 0
-	ServiceTellusAgent       = RoleRepeaterAgent + 1
 	ServiceSimpleApplication = RoleApplication + 0
 )
 
