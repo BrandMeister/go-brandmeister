@@ -69,14 +69,14 @@ func main() {
 				if err != nil {
 					log.Printf("received: DMR %s (%v)\n", t, err)
 				} else {
-					log.Printf("received: DMR %s: %T %+v\n", t, f, f)
+					log.Printf("received: DMR %s: %T %v\n", t, f, f)
 				}
 
 			case *rewind.DMRAudio:
 				log.Println("received: DMR audio frame")
 
 			case *rewind.SuperHeader:
-				log.Printf("received: super header: %T %+v\n", payload, payload)
+				log.Printf("received: super header: %T %v\n", payload, payload)
 
 			case *rewind.Raw:
 				log.Printf("received: raw (unparsed) type %d\n", payload.Type)
