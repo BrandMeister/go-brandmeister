@@ -143,31 +143,52 @@ func rpad(s string, l int) []byte {
 	return append([]byte(s), p...)
 }
 
+// Options flags
 type Options uint8
 
+// Slot number (0 = ts1, 1 = ts2)
 func (o Options) Slot() uint8 {
 	return uint8(o) & 0x01
 }
 
+// Protect flag (false = group call, true = private call)
 func (o Options) Protect() bool {
 	return (uint8(o) >> 1) == 1
 }
 
+// FrameType (0x00 = voice, 0x01 = voice sync, 0x02 = data)
 func (o Options) FrameType() uint8 {
 	return uint8(o>>2) & 0x03
 }
 
+// DataType raw DMR data type for data calls, voice frame number for voice calls
 func (o Options) DataType() uint8 {
 	return uint8(o >> 4)
 }
 
+// DMRData is a DMR data frame with metadata from the LC
 type DMRData struct {
-	Signature [4]byte  // 4
-	Sequence  uint8    // 5
-	Source    dmr.ID   // 8
-	Target    dmr.ID   // 11
-	Repeater  uint32   // 15
-	Options   Options  // 16
-	Stream    uint32   // 20
-	Data      [33]byte // 53
+	// Signature (always DMRD)
+	Signature [4]byte
+
+	// Sequence of data frame
+	Sequence uint8
+
+	// Source ID
+	Source dmr.ID
+
+	// Target ID
+	Target dmr.ID
+
+	// Repeater ID
+	Repeater uint32
+
+	// Options flags
+	Options Options
+
+	// Stream ID
+	Stream uint32
+
+	// Data is the raw DMR data
+	Data [33]byte
 }
