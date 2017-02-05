@@ -96,7 +96,11 @@ const (
 
 // Options
 const (
+	// OptionSuperHeader enables sending of super header metadata
 	OptionSuperHeader = 1 << iota
+
+	// OptionLinearFrame enables sending of linear coded AMBE without FEC
+	OptionLinearFrame
 )
 
 // Session types
