@@ -129,4 +129,38 @@ type SuperHeader struct {
 	TargetCall Call
 }
 
+func (h SuperHeader) Len() int {
+	return SuperHeaderLength
+}
+
+// DMRData is a DMR data packet
+type DMRData struct {
+	Type uint8
+	Data []byte
+}
+
+func (d DMRData) Len() int {
+	return 1 + len(d.Data)
+}
+
+// DMRAudio is a DMR audio packet
+type DMRAudio struct {
+	Type uint8
+	Data []byte
+}
+
+func (a DMRAudio) Len() int {
+	return 1 + len(a.Data)
+}
+
+// Raw (uninterpreted) packet
+type Raw struct {
+	Type uint16
+	Data []byte
+}
+
+func (r Raw) Len() int {
+	return 2 + len(r.Data)
+}
+
 // Rewind Transport Layer

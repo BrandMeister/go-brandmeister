@@ -12,6 +12,7 @@ import (
 	"time"
 )
 
+// Client implementing the Rewind protocol
 type Client struct {
 	KeepAlive time.Duration
 	Timeout   time.Duration
@@ -28,25 +29,19 @@ type Client struct {
 	// Subscriptions is a map of Target ID and session type
 	Subscriptions map[uint32]SessionType
 
-	// ApplicationCallback for application data
-	ApplicationCallback func(dataType uint16, parsed interface{})
-
-	// DeviceCallback for device data
-	DeviceCallback func(dataType uint16, parsed interface{})
-
 	conn net.Conn
 
 	quit chan struct{}
 	data chan []byte
 	errs chan error
 
-	password string
-	sequence uint32
-	auth     bool
+	password      string
+	sequence      uint32
+	auth          bool
+	lastKeepAlive time.Time
 }
 
-// NewClient sets up a Rewind protocol client with defaults
-// configured.
+// NewClient sets up a Rewind protocol client with defaults configured.
 func NewClient(addr, password string) (*Client, error) {
 	c := &Client{
 		KeepAlive: DefaultKeepAliveInterval,
@@ -70,6 +65,8 @@ func NewClient(addr, password string) (*Client, error) {
 	return c, nil
 }
 
+// Close the client socket and stop the receiver loop after it has been started
+// by ListenAndServe.
 func (c *Client) Close() error {
 	if c.quit != nil {
 		c.quit <- struct{}{} // listen
@@ -78,7 +75,9 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-func (c *Client) ListenAndServe() error {
+// ListenAndServe starts the packet receiver and decoder. Decoded payloads that
+// are not part of the Rewind protocol are sent to channel p.
+func (c *Client) ListenAndServe(p chan<- Payload) error {
 	c.quit = make(chan struct{}, 2)
 	c.data = make(chan []byte)
 	c.errs = make(chan error)
@@ -95,6 +94,12 @@ func (c *Client) ListenAndServe() error {
 	)
 
 	for {
+		if c.auth && time.Since(c.lastKeepAlive) > c.KeepAlive {
+			if err := c.sendConfiguration(); err != nil {
+				return err
+			}
+		}
+
 		select {
 		case data := <-c.data:
 			if len(data) < SignLength {
@@ -109,7 +114,7 @@ func (c *Client) ListenAndServe() error {
 				}
 				continue
 			}
-			if err := c.parse(data); err != nil {
+			if err := c.parse(data, p); err != nil {
 				c.quit <- struct{}{} // signal receiver
 				return err
 			}
@@ -149,7 +154,7 @@ func (c *Client) receive() {
 	}
 }
 
-func (c *Client) parse(b []byte) (err error) {
+func (c *Client) parse(b []byte, p chan<- Payload) (err error) {
 	var header Data
 	if err = binary.Read(bytes.NewBuffer(b), binary.LittleEndian, &header); err != nil {
 		return
@@ -196,10 +201,6 @@ func (c *Client) parse(b []byte) (err error) {
 		// Application Data
 
 	case TypeSuperHeader: // 0x0928
-		if c.ApplicationCallback == nil {
-			return nil
-		}
-
 		if l := len(b[DataLength:]); l < SuperHeaderLength {
 			log.Printf("rewind: received corrupt super header with length %d (expected %d)\n", l, SuperHeaderLength)
 			return nil
@@ -211,23 +212,34 @@ func (c *Client) parse(b []byte) (err error) {
 			return nil
 		}
 
-		c.ApplicationCallback(header.Type, &superHeader)
+		p <- &superHeader
 
-	default:
-		if header.Type >= ClassApplication {
-			// Application data will be sent to our callback
-			if c.ApplicationCallback != nil {
-				c.ApplicationCallback(header.Type, b[DataLength:])
-			}
-		} else if header.Type >= ClassDeviceData {
-			// Device data will be sent to our callback
-			if c.DeviceCallback != nil {
-				c.DeviceCallback(header.Type, b[DataLength:])
-			}
-		} else if Debug {
-			log.Printf("rewind: received unknown packet type %#04x\n", header.Type)
+	case TypeDMREmbeddedData:
+		p <- &DMRData{
+			Type: 0x11, // BrandMeister pseudo type
+			Data: b[DataLength:],
 		}
 
+	default:
+		if header.Type >= TypeDMRDataBase && header.Type < TypeDMRAudioBase {
+			p <- &DMRData{
+				Type: uint8(header.Type & 0x0f),
+				Data: b[DataLength:],
+			}
+		} else if header.Type >= TypeDMRAudioBase && header.Type < TypeDMREmbeddedData {
+			p <- &DMRAudio{
+				Type: uint8(header.Type - TypeDMRAudioBase),
+				Data: b[DataLength:],
+			}
+		} else {
+			if Debug {
+				log.Printf("rewind: received unknown packet type %#04x\n", header.Type)
+			}
+			p <- &Raw{
+				Type: header.Type,
+				Data: b[DataLength:],
+			}
+		}
 	}
 
 	return
@@ -268,6 +280,7 @@ func (c *Client) sendChallengeResponse(challenge []byte) error {
 
 func (c *Client) sendConfiguration() error {
 	log.Printf("rewind: sending configuration (%d)\n", c.Options)
+	c.lastKeepAlive = time.Now()
 	return c.sendData(TypeConfiguration, ConfigurationData(c.Options))
 }
 
