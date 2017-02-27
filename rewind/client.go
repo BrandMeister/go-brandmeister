@@ -279,7 +279,9 @@ func (c *Client) sendChallengeResponse(challenge []byte) error {
 }
 
 func (c *Client) sendConfiguration() error {
-	log.Printf("rewind: sending configuration (%d)\n", c.Options)
+	if Debug {
+		log.Printf("rewind: sending configuration (%#08x)\n", c.Options)
+	}
 	c.lastKeepAlive = time.Now()
 	return c.sendData(TypeConfiguration, ConfigurationData(c.Options))
 }
